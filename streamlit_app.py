@@ -9,13 +9,15 @@ import json
 load_dotenv() 
 
 # Configure the API
-genai.configure(api_key=os.getenv("deshm"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-def get_gemini_repsonse(input):
-    model = genai.GenerativeModel('gemini-pro')
+# Function to get response from Gemini
+def get_gemini_response(input):
+    model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(input)
     return response.text
 
+# Function to extract text from PDF
 def input_pdf_text(uploaded_file):
     reader = pdf.PdfReader(uploaded_file)
     text = ""
@@ -25,28 +27,31 @@ def input_pdf_text(uploaded_file):
     return text
 
 # Prompt Template
-input_prompt = """
+input_prompt_template = """
 Hey Act Like a skilled or very experience ATS(Application Tracking System)
-with a deep understanding of tech field,software engineering,data science ,data analyst
+with a deep understanding of tech field, software engineering, data science, data analyst
 and big data engineer. Your task is to evaluate the resume based on the given job description.
 You must consider the job market is very competitive and you should provide 
-best assistance for improving thr resumes. Assign the percentage Matching based 
-on Jd and the missing keywords with high accuracy
-resume:{text}
-description:{jd}
+best assistance for improving the resumes. Assign the percentage Matching based 
+on JD and the missing keywords with high accuracy.
+Resume: {resume}
+Description: {jd}
 
 I want the response in one single string having the structure
-{{"JD Match":"%",
-"MissingKeywords:[],
-"Profile Summary":""}}
+{{
+"JD Match":"%", 
+"MissingKeywords":[], 
+"Profile Summary":""
+}}
 """
 
 # CSS to add background image
 page_bg_img = '''
 <style>
 .stApp {
-background-image: url("ats-resume-checker-1705678136705-compressed.jpeg")
-background-position: center;
+    background-image: url("ats-resume-checker-1705678136705-compressed.jpeg");
+    background-position: center;
+    background-size: cover;
 }
 </style>
 '''
@@ -64,6 +69,12 @@ submit = st.button("Submit")
 
 if submit:
     if uploaded_file is not None:
-        text = input_pdf_text(uploaded_file)
-        response = get_gemini_repsonse(input_prompt)
-        st.subheader(response)
+        resume_text = input_pdf_text(uploaded_file)
+        # Format the input prompt with the resume and JD
+        input_prompt = input_prompt_template.format(resume=resume_text, jd=jd)
+        
+        # Call the API to get the response
+        response = get_gemini_response(input_prompt)
+        
+        st.subheader("ATS Evaluation Result")
+        st.text(response)
